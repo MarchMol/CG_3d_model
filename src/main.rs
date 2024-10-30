@@ -3,6 +3,7 @@ use minifb::{Key, Window, WindowOptions};
 use nalgebra_glm::{Mat4, Vec3};
 use screen::framebuffer;
 use obj::Obj;
+use uniforms::Uniforms;
 use std::f32::consts::PI;
 
 mod screen;
@@ -11,6 +12,8 @@ mod fragments;
 mod obj;
 mod uniforms;
 mod shader;
+mod bounding_box;
+
 fn main() {
     // Window
     let window_width = 800;
@@ -34,13 +37,29 @@ fn main() {
     // Obj
     let object =  Obj::load("./spaceship.obj").expect("Failed to load obj");
     let vertex_array = object.get_vertex_array();
+    let light_dir= Vec3::new(1.0, 3.0, -4.0);
+
+    // View Variables
+    let mut translation = Vec3::new(300.0, 200.0, 0.0);
+    let mut rotation = Vec3::new(0.0, 0.0, 0.0);
+    let mut scale = 100.0f32;
 
     // Main Window Loop:
     while window.is_open() {
+        // Closing listener
         framebuffer.clear();
         if window.is_key_down(Key::Escape) {
             break;
         }
+
+        // Input listener
+        handle_input(&window, &mut translation, &mut rotation, &mut scale);
+        let model_matrix = create_model_matrix(translation, scale, rotation);
+        let uniforms= Uniforms { model_matrix, light_dir };
+        
+        // Rendering stage
+        uniforms::render(&mut framebuffer, &uniforms, &vertex_array);
+        
         window
             .update_with_buffer(
                 &framebuffer.color_array_to_u32(),
